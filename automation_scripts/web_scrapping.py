@@ -44,6 +44,8 @@ class WebScrapper(object):
             "arrow_up": Keys.ARROW_UP,
             "arrow_left": Keys.ARROW_LEFT,
             "arrow_right": Keys.ARROW_RIGHT,
+            'page_up': Keys.PAGE_UP,
+            'page_down': Keys.PAGE_DOWN,
             "delete": Keys.DELETE,
             "escape": Keys.ESCAPE,
             "space": Keys.SPACE,
@@ -199,8 +201,16 @@ class WebScrapper(object):
             return
         elif type(element) is list:
             element = element[0]
+        elif type(element) is str:
+            element = self.get_elements(element)[0]
 
         ActionChains(self.driver).move_to_element(element).perform()
+
+    def scroll_to_element_class(self, element):
+        """
+        Scrolls up to set a element_class in view position.
+        """
+        self.scripting("document.getElementByClassName('{0}').scrollIntoView();".format(element_class))
 
     def clear_content(self, elements):
         """
@@ -231,9 +241,9 @@ class WebScrapper(object):
         for element in elements:
             i = elements.index(element)
             if i == 0:
-                    element.screenshot(filename + '.png')
+                element.screenshot(filename + '.png')
             else:
-                    element.screenshot(filename + str(i) + '.png')
+                element.screenshot(filename + str(i) + '.png')
 
     def get_properties(self, name, elements=None):
         """
@@ -259,6 +269,32 @@ class WebScrapper(object):
 
         return attributes
 
+    def get_all_properties(self, elements=None):
+        """
+        Gets all properties of the element.
+
+         - If the argument is a list of elements, does the same
+           for each one.
+         - If no element is given, use the driver.
+        """
+        properties = list()
+ 
+        if elements == None:
+            elements = self.driver
+        elif type(elements) is not list:
+            elements = [elements]
+
+        for element in elements:
+            properties.append(self.driver.execute_script(' \
+                    var items = {}; \
+                    for (index = 0; index < arguments[0].attributes.length; ++index) { \
+                        items[arguments[0].attributes[index].name] = arguments[0].attributes[index].value \
+                    }; \
+                    return items;',
+                    element))
+
+        return properties
+
     def scripting(self, code=None, filename=None):
         """
         Ejecuta un script JS.
@@ -270,16 +306,31 @@ class WebScrapper(object):
             code = file.read()
             file.close()
 
+        script_response = None
+
         if type(code) is list:
+            script_response = list()
             for script in code:
-                self.driver.execute_script(script)
+                response = self.driver.execute_script(script)
+                script_response.append(response)
         else:
-            self.driver.execute_script(code)
+            script_response = self.driver.execute_script(code)
+
+        return script_response
 
 def main():
-    scrapper = WebScrapper("https://docs.google.com/forms/d/e/1FAIpQLSc1QU6g2ncjgnyYr_rUOz1O4yOWV32elS0ZIRhSUYoaPgeHew/viewform")
+    scrapper = WebScrapper(
+        "/home/joel/Apps/chromedriver",
+        "https://web.whatsapp.com" 
+    )
 
-    sleep(1)
+    sleep(5)
+
+    element = scrapper.get_elements("._3soxC")
+    print(element)
+    # scrapper.move_mouse_to_element(element)
+
+    sleep(5)
 
     scrapper.quit()
 
