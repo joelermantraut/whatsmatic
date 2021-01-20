@@ -38,12 +38,14 @@ class WebScrapper(object):
             "ctrl": Keys.CONTROL,
             "alt": Keys.ALT,
             "shift": Keys.SHIFT,
+        }
+        self.special_strings = {
             "enter": Keys.RETURN,
-            "backspace": Keys.BACKSPACE,
             "arrow_down": Keys.ARROW_DOWN,
             "arrow_up": Keys.ARROW_UP,
             "arrow_left": Keys.ARROW_LEFT,
             "arrow_right": Keys.ARROW_RIGHT,
+            "backspace": Keys.BACKSPACE,
             'page_up': Keys.PAGE_UP,
             'page_down': Keys.PAGE_DOWN,
             "delete": Keys.DELETE,
@@ -125,20 +127,22 @@ class WebScrapper(object):
                 # Obtiene el objeto de Selenium que corresponde a la modificadora
                 else:
                     if element is None:
-                            ActionChains(self.driver).send_keys(key).perform()
+                        ActionChains(self.driver).send_keys(key).perform()
                     else:
-                            ActionChains(self.driver).send_keys_to_element(element, key).perform()
+                        ActionChains(self.driver).send_keys_to_element(element, key).perform()
 
             for key in keys:
                 if key in self.modifier_strings.keys():
                     key = self.modifier_strings[key]
                     ActionChains(self.driver).key_up(key).perform()
-            # Suelta todas los modificadores
+                    # Suelta todas los modificadores
 
         else:
             # Para teclas individuales
             if key in self.modifier_strings.keys():
                 key = self.modifier_strings[key]
+            elif key in self.special_strings.keys():
+                key = self.special_strings[key]
             # Verificamos si es una tecla especial
 
             if element is None:
@@ -156,6 +160,9 @@ class WebScrapper(object):
         """
         if type(elements) is not list:
             elements = [elements]
+
+        if type(keys_list) is not list:
+            keys_list = [keys_list]
 
         for element in elements:
             for key in keys_list:
