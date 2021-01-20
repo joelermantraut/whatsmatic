@@ -28,6 +28,7 @@ class MouseControl(object):
         self.on_move_f = None
         self.on_click_f = None
         self.on_scroll_f = None
+        self.scrolling_distance = 60
         self.init()
 
     def init(self):
@@ -90,7 +91,7 @@ class MouseControl(object):
 
             amount = int((amount / 100) * first_monitor_height)
 
-        self.controller.scroll(0, -amount)
+        self.controller.scroll(0, -amount // self.scrolling_distance)
 
     # --------------------------------------------------
     # --------------- MOUSE MONITORING -----------------
