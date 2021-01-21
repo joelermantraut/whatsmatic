@@ -173,6 +173,15 @@ class WhatsMatic(object):
 
         return self.files.list_files(r'.*.wmg')
 
+    def group_exists(self, group_name):
+        """
+        Checks if a group with that name was already created.
+        """
+        if group_name in self.get_groups():
+            return True
+        else:
+            return False
+
     def search_chat(self, name):
         """
         Search for a chat with the name given and returns the element.
@@ -242,12 +251,38 @@ class WhatsMatic(object):
         """
         new_contact = list()
 
-        for contact_index in range(len(contacts_list)):
-            if contact_index in contacts_index:
-                new_contact.append(contacts_list[contact_index])
+        for index in range(len(contacts_list)):
+            if str(index) in contacts_index:
+                new_contact.append(contacts_list[index])
 
-        with open("{}.wmg", "w") as file:
+        filename = self.files.create_file(self.files_path, name, 'wmg')
+        with filename as file:
             file.write(",".join(new_contact))
+
+        return filename
+
+    def create_group_routine(self, group_name):
+        """
+        Routine to create a new group.
+        """
+        if self.group_exists(group_name):
+            print("Group already exists. Do you want to overwrite it: ")
+            response = input()
+            if response.lower() in ['y', 'yes']:
+                print("Overwrote.")
+            else:
+                return False
+
+        print("Contacts will be numerically list.")
+        print("Write comma separated indexes of contacts to include.")
+        contacts = self.get_contacts()
+        for contact_index in range(len(contacts)):
+            print("{}. {}".format(contact_index, contacts[contact_index]))
+
+        print("Contact list: ")
+        contact_list = input()
+        self.create_a_group(group_name, contacts, contact_list.split(","))
+        return True
 
     def close(self):
         """
@@ -264,7 +299,7 @@ def arg_parsing():
     parser.add_argument("-l", "--list", help="list_contacts", action="store_true")
     parser.add_argument("-s", "--send", help="send a message to a contact")
     parser.add_argument("-m", "--message", help="takes the message")
-    parser.add_argument("-g", "--group", help="creates a group", action="store_true")
+    parser.add_argument("-g", "--group", help="creates a group")
 
     return parser.parse_args()
 
@@ -285,13 +320,17 @@ def take_action(args, whatsmatic):
         print("ERROR: Missing message parameter.")
     elif args.message:
         print("ERROR: Missing send parameter.")
+    elif args.group:
+        if args.message:
+            whatsmatic.send_to_group(args.group, args.message)
+        else:
+            whatsmatic.create_group_routine(args.group)
 
 def main():
     whatsmatic = WhatsMatic("/home/joel/whatsmatic")
-    print(whatsmatic.get_groups())
 
-    # args = arg_parsing()
-    # take_action(args, whatsmatic)
+    args = arg_parsing()
+    take_action(args, whatsmatic)
 
     whatsmatic.close()
 
