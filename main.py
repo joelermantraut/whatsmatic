@@ -44,6 +44,7 @@ from automation_scripts.mouse_control import MouseControl
 from automation_scripts.files_use import FileUse
 from time import sleep
 import argparse
+from os import remove
 
 class WhatsMatic(object):
     """App to control WhatsApp and automate it."""
@@ -59,7 +60,6 @@ class WhatsMatic(object):
         self.notification_message_element = "._3Aa1y"
         self.chat_per_page = 5
         self.files_path = files_path
-        self.init()
 
     def init(self):
         """
@@ -76,8 +76,6 @@ class WhatsMatic(object):
 
         self.wait_for_scan()
         self.wait_for_notification_message()
-
-        sleep(2)
 
     def wait_for_scan(self):
         """
@@ -222,7 +220,6 @@ class WhatsMatic(object):
         text_input = self.driver.get_elements("._1awRl", footer)
 
         self.driver.send_keys(text_input, [content])
-        sleep(5)
         self.driver.send_keys(text_input, ["enter"])
 
     def send_to_group(self, group, message):
@@ -255,16 +252,21 @@ class WhatsMatic(object):
             if str(index) in contacts_index:
                 new_contact.append(contacts_list[index])
 
-        filename = self.files.create_file(self.files_path, name, 'wmg')
-        with filename as file:
+        with open("{}/{}".format(self.files_path, name), "w") as file:
             file.write(",".join(new_contact))
 
-        return filename
+        return "{}/{}".format(self.files_path, name)
 
-    def create_group_routine(self, group_name):
+    def create_group_routine(self):
         """
         Routine to create a new group.
         """
+        print("Insert group name: ")
+        group_name = input()
+
+        group_name += ".wmg"
+        # Adds extension to filename
+
         if self.group_exists(group_name):
             print("Group already exists. Do you want to overwrite it: ")
             response = input()
@@ -284,6 +286,69 @@ class WhatsMatic(object):
         self.create_a_group(group_name, contacts, contact_list.split(","))
         return True
 
+    def remove_group_routine(self):
+        """
+        Shows routine to remove a group.
+        """
+        groups = self.get_groups()
+
+        for group_index in range(len(groups)):
+            print("{}. {}".format(group_index, groups[group_index]))
+
+        print("Select a group: ")
+        group_number = input()
+        print("Remove group {}?".format(groups[int(group_number)]))
+        response = input()
+        if response.lower() in ['y', 'yes']:
+            remove(groups[int(group_number)])
+            print("Group removed.")
+
+    def edit_group_routine(self):
+        """
+        Shows routine to edit a group.
+        """
+        groups = self.get_groups()
+
+        if len(groups) == 0:
+            print("There are no groups to edit.")
+            exit()
+
+        for group_index in range(len(groups)):
+            print("{}. {}".format(group_index, groups[group_index]))
+
+        print("Select a group: ")
+        group_number = input()
+
+        print("Contacts will be numerically list.")
+        print("Write comma separated indexes of contacts to include.")
+        contacts = self.get_contacts()
+        for contact_index in range(len(contacts)):
+            print("{}. {}".format(contact_index, contacts[contact_index]))
+
+        print("Contact list: ")
+        contact_list = input()
+
+        remove(groups[int(group_number)])
+        group_name = groups[int(group_number)].split('/')[-1]
+        self.create_a_group(group_name, contacts, contact_list.split(","))
+
+    def manage_groups(self, option):
+        """
+        Interface to add/edit/remove groups.
+        """
+        if option == "1":
+            print("Create a group.")
+            self.create_group_routine()
+        elif option == "2":
+            print("Remove a group.")
+            self.remove_group_routine()
+        elif option == "3":
+            print("Edit a group")
+            self.edit_group_routine()
+        else:
+            print("Incorrect option.")
+            exit()
+
     def close(self):
         """
         Closes driver.
@@ -299,7 +364,7 @@ def arg_parsing():
     parser.add_argument("-l", "--list", help="list_contacts", action="store_true")
     parser.add_argument("-s", "--send", help="send a message to a contact")
     parser.add_argument("-m", "--message", help="takes the message")
-    parser.add_argument("-g", "--group", help="creates a group")
+    parser.add_argument("-g", "--group", help="manage groups")
 
     return parser.parse_args()
 
@@ -309,22 +374,25 @@ def take_action(args, whatsmatic):
     """
     if args.version:
         print("WhatsMatic version 1.0.0")
-    elif args.list:
-        if args.group:
-            print("\n".join(whatsmatic.get_groups()))
-        else:
-            print("\n".join(whatsmatic.get_contacts()))
-    elif args.send and args.message:
-        whatsmatic.send_message(args.send, args.message)
-    elif args.send:
+    elif args.list and args.group:
+        print("\n".join(whatsmatic.get_groups()))
+    elif args.send and not args.message:
         print("ERROR: Missing message parameter.")
-    elif args.message:
+    elif args.message and not args.send and not args.group:
         print("ERROR: Missing send parameter.")
-    elif args.group:
-        if args.message:
-            whatsmatic.send_to_group(args.group, args.message)
-        else:
-            whatsmatic.create_group_routine(args.group)
+    else:
+        # All functions that need WhatsMatic object
+        whatsmatic.init()
+
+        if args.list:
+            print("\n".join(whatsmatic.get_contacts()))
+        elif args.send and args.message:
+            whatsmatic.send_message(args.send, args.message)
+        elif args.group:
+            if args.message:
+                whatsmatic.send_to_group(args.group, args.message)
+            else:
+                whatsmatic.manage_groups(args.group)
 
 def main():
     whatsmatic = WhatsMatic("/home/joel/whatsmatic")
