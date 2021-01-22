@@ -30,25 +30,17 @@ _1yHR2:
 
 """
 
-"""
-
-BUGS:
-
-1) No reconoce los grupos.
-3) Habria que modificar las librerias y reescribir segun corresponda.
-
-"""
-
 from automation_scripts.web_scrapping import WebScrapper
 from automation_scripts.mouse_control import MouseControl
 from automation_scripts.files_use import FileUse
 from time import sleep
 import argparse
-from os import remove
+from os import remove, getcwd
+from os.path import exists, expanduser
 
 class WhatsMatic(object):
     """App to control WhatsApp and automate it."""
-    def __init__(self, files_path=""):
+    def __init__(self, HOME):
         self.side_element = "._2ruyW"
         self.list_of_chats_element = "._3soxC"
         self.header_element = "._2O84H"
@@ -59,14 +51,19 @@ class WhatsMatic(object):
         self.barcode_element = "._1yHR2"
         self.notification_message_element = "._3Aa1y"
         self.chat_per_page = 5
-        self.files_path = files_path
+        self.files_path = getcwd()
+        if exists(self.files_path + "/chromedriver.txt"):
+            with open(self.files_path + "/chromedriver.txt", "r") as file:
+                self.chromedriver = file.readline()
+        else:
+            self.chromedriver = HOME + "/chromedriver"
 
     def init(self):
         """
         Inits objects.
         """
         self.driver = WebScrapper(
-            "/home/joel/Apps/chromedriver",
+            self.chromedriver,
             "https://web.whatsapp.com"
         )
 
@@ -74,6 +71,7 @@ class WhatsMatic(object):
 
         self.files = FileUse()
 
+        self.driver.maximize()
         self.wait_for_scan()
         self.wait_for_notification_message()
 
@@ -151,7 +149,6 @@ class WhatsMatic(object):
             elements = self.driver.get_elements(self.chat_element)
             for element in elements:
                 title = self.driver.get_all_properties(element)[0]['title']
-                print(title)
 
                 if title not in contacts:
                     contacts.append(title)
@@ -169,7 +166,12 @@ class WhatsMatic(object):
         """
         self.files.list_all(self.files_path)
 
-        return self.files.list_files(r'.*.wmg')
+        groups = self.files.list_files(r'.*.wmg')
+        if groups == 0:
+            print("There are no groups.")
+            exit()
+
+        return groups
 
     def group_exists(self, group_name):
         """
@@ -309,10 +311,6 @@ class WhatsMatic(object):
         """
         groups = self.get_groups()
 
-        if len(groups) == 0:
-            print("There are no groups to edit.")
-            exit()
-
         for group_index in range(len(groups)):
             print("{}. {}".format(group_index, groups[group_index]))
 
@@ -365,6 +363,7 @@ def arg_parsing():
     parser.add_argument("-s", "--send", help="send a message to a contact")
     parser.add_argument("-m", "--message", help="takes the message")
     parser.add_argument("-g", "--group", help="manage groups")
+    parser.add_argument("-c", "--chromedriver", help="sets default location of Chromedriver")
 
     return parser.parse_args()
 
@@ -380,8 +379,11 @@ def take_action(args, whatsmatic):
         print("ERROR: Missing message parameter.")
     elif args.message and not args.send and not args.group:
         print("ERROR: Missing send parameter.")
+    elif args.chromedriver:
+        with open(whatsmatic.files_path + "/chromedriver.txt", "w") as file:
+            file.write(args.chromedriver)
     else:
-        # All functions that need WhatsMatic object
+        # All functions that need WhatsMatic to open WhatsApp
         whatsmatic.init()
 
         if args.list:
@@ -394,13 +396,14 @@ def take_action(args, whatsmatic):
             else:
                 whatsmatic.manage_groups(args.group)
 
+        whatsmatic.close()
+
 def main():
-    whatsmatic = WhatsMatic("/home/joel/whatsmatic")
+    HOME = expanduser('~')
+    whatsmatic = WhatsMatic(HOME)
 
     args = arg_parsing()
     take_action(args, whatsmatic)
-
-    whatsmatic.close()
 
 if __name__ == "__main__":
     main()
