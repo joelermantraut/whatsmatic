@@ -37,6 +37,7 @@ from time import sleep
 import argparse
 from os import remove, getcwd
 from os.path import exists, expanduser
+import sys
 
 class WhatsMatic(object):
     """App to control WhatsApp and automate it."""
@@ -353,11 +354,10 @@ class WhatsMatic(object):
         """
         self.driver.quit()
 
-def arg_parsing():
+def arg_parsing(parser):
     """
     Function to parse arguments from CLI.
     """
-    parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--version", help="show program version", action="store_true")
     parser.add_argument("-l", "--list", help="list_contacts", action="store_true")
     parser.add_argument("-s", "--send", help="send a message to a contact")
@@ -365,13 +365,16 @@ def arg_parsing():
     parser.add_argument("-g", "--group", help="manage groups")
     parser.add_argument("-c", "--chromedriver", help="sets default location of Chromedriver")
 
-    return parser.parse_args()
-
-def take_action(args, whatsmatic):
+def take_action(parser, whatsmatic):
     """
     Decides what to do with the args given.
     """
-    if args.version:
+    args = parser.parse_args()
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+    # No argument given
+    elif args.version:
         print("WhatsMatic version 1.0.0")
     elif args.list and args.group:
         print("\n".join(whatsmatic.get_groups()))
@@ -402,8 +405,9 @@ def main():
     HOME = expanduser('~')
     whatsmatic = WhatsMatic(HOME)
 
-    args = arg_parsing()
-    take_action(args, whatsmatic)
+    parser = argparse.ArgumentParser()
+    arg_parsing(parser)
+    take_action(parser, whatsmatic)
 
 if __name__ == "__main__":
     main()
